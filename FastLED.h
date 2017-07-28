@@ -11,12 +11,12 @@
 #define FASTLED_HAS_PRAGMA_MESSAGE
 #endif
 
-#define  FASTLED_VERSION 3001005
+#define  FASTLED_VERSION 4000000
 #ifndef FASTLED_INTERNAL
 #  ifdef FASTLED_HAS_PRAGMA_MESSAGE
-#    pragma message "FastLED version 3.001.005"
+#    pragma message "FastLED - Maniacal Labs Fork"
 #  else
-#    warning FastLED version 3.001.005  (Not really a warning, just telling you here.)
+#    warning FastLED - Maniacal Labs Fork  (Not really a warning, just telling you here.)
 #  endif
 #endif
 
