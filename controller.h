@@ -95,6 +95,8 @@ public:
         showColor(data, m_nLeds, getAdjustment(brightness));
     }
 
+    virtual void scale(uint8_t val) = 0;
+
     /// get the first led controller in the chain of controllers
     static CLEDController *head() { return m_pHead; }
     /// get the next controller in the chain after this one.  will return NULL at the end of the chain
