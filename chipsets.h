@@ -158,20 +158,22 @@ template <uint8_t DATA_PIN, uint8_t CLOCK_PIN, EOrder RGB_ORDER = RGB, uint8_t S
 class APA102Controller : public CPixelLEDController<RGB_ORDER> {
 	typedef SPIOutput<DATA_PIN, CLOCK_PIN, SPI_SPEED> SPI;
 	SPI mSPI;
+    uint8_t _scale;
 
 	void startBoundary() { mSPI.writeWord(0); mSPI.writeWord(0); }
-	void endBoundary(int nLeds) { int nDWords = (nLeds/32); do { mSPI.writeByte(0xFF); mSPI.writeByte(0x00); mSPI.writeByte(0x00); mSPI.writeByte(0x00); } while(nDWords--); }
-
-	inline void writeLed(uint8_t b0, uint8_t b1, uint8_t b2) __attribute__((always_inline)) {
-		mSPI.writeByte(0xFF); mSPI.writeByte(b0); mSPI.writeByte(b1); mSPI.writeByte(b2);
-	}
+	void endBoundary(int nLeds) { int nDWords = (nLeds/16) + 1; do { mSPI.writeByte(0x00); mSPI.writeByte(0x00); mSPI.writeByte(0x00); mSPI.writeByte(0x00); } while(nDWords--); }
 
 public:
 	APA102Controller() {}
 
 	virtual void init() {
 		mSPI.init();
+        scale(16);
 	}
+
+    virtual void scale(uint8_t val){
+        _scale = 0xE0 + (val >> 3); //bitshift to scale from 8 bit to 5
+    }
 
 protected:
 
@@ -180,13 +182,18 @@ protected:
 
 		startBoundary();
 		while(pixels.has(1)) {
+            #  ifdef FASTLED_HAS_PRAGMA_MESSAGE
+            #    pragma message "FastLED - Maniacal Labs Fork"
+            #  else
+            #    warning FastLED - Maniacal Labs Fork  (Not really a warning, just telling you here.)
+            #  endif
 #ifdef FASTLED_SPI_BYTE_ONLY
-			mSPI.writeByte(0xFF);
+			mSPI.writeByte(_scale);
 			mSPI.writeByte(pixels.loadAndScale0());
 			mSPI.writeByte(pixels.loadAndScale1());
 			mSPI.writeByte(pixels.loadAndScale2());
 #else
-			uint16_t b = 0xFF00 | (uint16_t)pixels.loadAndScale0();
+			uint16_t b = (_scale << 8) | (uint16_t)pixels.loadAndScale0();
 			mSPI.writeWord(b);
 			uint16_t w = pixels.loadAndScale1() << 8;
 			w |= pixels.loadAndScale2();
@@ -201,62 +208,6 @@ protected:
 	}
 
 };
-
-/// SK9822 controller class.
-/// @tparam DATA_PIN the data pin for these leds
-/// @tparam CLOCK_PIN the clock pin for these leds
-/// @tparam RGB_ORDER the RGB ordering for these leds
-/// @tparam SPI_SPEED the clock divider used for these leds.  Set using the DATA_RATE_MHZ/DATA_RATE_KHZ macros.  Defaults to DATA_RATE_MHZ(24)
-template <uint8_t DATA_PIN, uint8_t CLOCK_PIN, EOrder RGB_ORDER = RGB, uint8_t SPI_SPEED = DATA_RATE_MHZ(24)>
-class SK9822Controller : public CPixelLEDController<RGB_ORDER> {
-	typedef SPIOutput<DATA_PIN, CLOCK_PIN, SPI_SPEED> SPI;
-	SPI mSPI;
-
-	void startBoundary() { mSPI.writeWord(0); mSPI.writeWord(0); }
-	void endBoundary(int nLeds) { int nLongWords = (nLeds/32); do { mSPI.writeByte(0x00); mSPI.writeByte(0x00); mSPI.writeByte(0x00); mSPI.writeByte(0x00); } while(nLongWords--); }
-
-	inline void writeLed(uint8_t b0, uint8_t b1, uint8_t b2) __attribute__((always_inline)) {
-		mSPI.writeByte(0xFF); mSPI.writeByte(b0); mSPI.writeByte(b1); mSPI.writeByte(b2);
-	}
-
-public:
-	SK9822Controller() {}
-
-	virtual void init() {
-		mSPI.init();
-	}
-
-protected:
-
-	virtual void showPixels(PixelController<RGB_ORDER> & pixels) {
-		mSPI.select();
-
-		startBoundary();
-		while(pixels.has(1)) {
-#ifdef FASTLED_SPI_BYTE_ONLY
-			mSPI.writeByte(0xFF);
-			mSPI.writeByte(pixels.loadAndScale0());
-			mSPI.writeByte(pixels.loadAndScale1());
-			mSPI.writeByte(pixels.loadAndScale2());
-#else
-			uint16_t b = 0xFF00 | (uint16_t)pixels.loadAndScale0();
-			mSPI.writeWord(b);
-			uint16_t w = pixels.loadAndScale1() << 8;
-			w |= pixels.loadAndScale2();
-			mSPI.writeWord(w);
-#endif
-			pixels.stepDithering();
-			pixels.advanceData();
-		}
-
-		endBoundary(pixels.size());
-
-		mSPI.waitFully();
-		mSPI.release();
-	}
-
-};
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
